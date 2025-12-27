@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import AIAssistant from "./pages/AIAssistant";
+import FindBuddies from "./pages/FindBuddies";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route path="/find-buddies" element={<FindBuddies />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

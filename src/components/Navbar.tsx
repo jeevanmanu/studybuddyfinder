@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Menu, X, BookOpen, Users } from 'lucide-react';
+import { Menu, X, BookOpen, Users, Brain, Search } from 'lucide-react';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,6 +12,12 @@ export function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/about', label: 'About' },
+  ];
+
+  const authNavLinks = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/ai-assistant', label: 'AI Assistant', icon: Brain },
+    { href: '/find-buddies', label: 'Find Buddies', icon: Search },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -55,10 +61,12 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <Button variant="ghost" asChild>
-                  <Link to="/dashboard">Dashboard</Link>
-                </Button>
-                <Button variant="outline" onClick={signOut}>
+                {authNavLinks.map((link) => (
+                  <Button key={link.href} variant="ghost" size="sm" asChild>
+                    <Link to={link.href}>{link.label}</Link>
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm" onClick={signOut}>
                   Sign Out
                 </Button>
               </>
