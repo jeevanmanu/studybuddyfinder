@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
 import AIAssistant from "./pages/AIAssistant";
 import FindBuddies from "./pages/FindBuddies";
 import Messages from "./pages/Messages";
@@ -28,7 +27,7 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile" element={<Dashboard />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/find-buddies" element={<FindBuddies />} />
             <Route path="/messages" element={<Messages />} />

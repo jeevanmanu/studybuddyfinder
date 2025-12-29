@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Mail, Lock, User, ArrowRight, Sparkles, Eye, EyeOff, Shield } from 'lucide-react';
+import { Users, Mail, Lock, User, ArrowRight, Sparkles, Eye, EyeOff, Shield, BookOpen, Brain, Zap } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string()
@@ -62,7 +62,6 @@ export default function Auth() {
     setIsSignUp(searchParams.get('mode') === 'signup');
   }, [searchParams]);
 
-  // Check if user is locked out
   const isLockedOut = lockoutUntil && new Date() < lockoutUntil;
 
   const validateForm = () => {
@@ -103,7 +102,6 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check lockout
     if (isLockedOut) {
       const remainingTime = Math.ceil((lockoutUntil!.getTime() - Date.now()) / 1000 / 60);
       toast({
@@ -125,7 +123,6 @@ export default function Auth() {
       if (isSignUp) {
         const { error } = await signUp(trimmedEmail, password, trimmedName);
         if (error) {
-          // Handle specific error cases
           const errorMessage = error.message.toLowerCase();
           
           if (errorMessage.includes('already registered') || 
@@ -143,7 +140,7 @@ export default function Auth() {
               variant: 'destructive',
             });
           } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
-            setLockoutUntil(new Date(Date.now() + 5 * 60 * 1000)); // 5 minute lockout
+            setLockoutUntil(new Date(Date.now() + 5 * 60 * 1000));
             toast({
               title: 'Too many attempts',
               description: 'Please wait 5 minutes before trying again.',
@@ -158,21 +155,22 @@ export default function Auth() {
           }
         } else {
           toast({
-            title: 'Welcome to StudyBuddyFinder!',
-            description: 'Your account has been created successfully.',
+            title: 'Account created successfully!',
+            description: 'Please sign in with your credentials.',
           });
-          navigate('/dashboard');
+          // Reset form and switch to sign in
+          setPassword('');
+          setConfirmPassword('');
+          setIsSignUp(false);
         }
       } else {
         const { error } = await signIn(trimmedEmail, password);
         if (error) {
-          // Increment attempt count for failed logins
           const newAttemptCount = attemptCount + 1;
           setAttemptCount(newAttemptCount);
           
-          // Lock out after 5 failed attempts
           if (newAttemptCount >= 5) {
-            setLockoutUntil(new Date(Date.now() + 15 * 60 * 1000)); // 15 minute lockout
+            setLockoutUntil(new Date(Date.now() + 15 * 60 * 1000));
             toast({
               title: 'Account temporarily locked',
               description: 'Too many failed attempts. Please try again in 15 minutes.',
@@ -186,7 +184,7 @@ export default function Auth() {
             });
           }
         } else {
-          setAttemptCount(0); // Reset on successful login
+          setAttemptCount(0);
           navigate('/dashboard');
         }
       }
@@ -223,53 +221,100 @@ export default function Auth() {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Decorative */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-primary relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-20 w-80 h-80 bg-accent/20 rounded-full blur-3xl" />
+    <div className="min-h-screen flex relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Floating orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/15 rounded-full blur-3xl animate-float delay-200" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/5 to-accent/5 rounded-full blur-3xl" />
         
-        <div className="relative z-10 flex flex-col justify-center items-center text-center p-12">
-          <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-8 animate-float">
-            <Users className="w-10 h-10 text-white" />
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px'
+          }}
+        />
+      </div>
+
+      {/* Left side - Decorative */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 gradient-primary opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-primary/20 to-accent/30" />
+        
+        {/* Decorative elements */}
+        <div className="absolute top-20 left-20 w-64 h-64 bg-primary-foreground/10 rounded-full blur-3xl animate-pulse-soft" />
+        <div className="absolute bottom-20 right-20 w-80 h-80 bg-accent/20 rounded-full blur-3xl animate-pulse-soft delay-300" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 border border-primary-foreground/10 rounded-full animate-spin" style={{ animationDuration: '30s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 border border-primary-foreground/5 rounded-full animate-spin" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center items-center text-center p-12 w-full">
+          <div className="w-24 h-24 rounded-3xl bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center mb-8 animate-float shadow-glow">
+            <Users className="w-12 h-12 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">
+          <h1 className="text-5xl font-bold text-primary-foreground mb-6 animate-fade-up">
             StudyBuddyFinder
           </h1>
-          <p className="text-xl text-white/80 max-w-md">
+          <p className="text-xl text-primary-foreground/80 max-w-md mb-12 animate-fade-up delay-100">
             Join thousands of students finding their perfect study partners and achieving their academic goals together.
           </p>
           
+          {/* Features */}
+          <div className="space-y-4 animate-fade-up delay-200">
+            <div className="flex items-center gap-3 text-primary-foreground/90">
+              <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <span>Find study partners by subject</span>
+            </div>
+            <div className="flex items-center gap-3 text-primary-foreground/90">
+              <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                <Brain className="w-5 h-5" />
+              </div>
+              <span>AI-powered learning assistance</span>
+            </div>
+            <div className="flex items-center gap-3 text-primary-foreground/90">
+              <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                <Zap className="w-5 h-5" />
+              </div>
+              <span>Real-time messaging & collaboration</span>
+            </div>
+          </div>
+          
           {/* Security badge */}
-          <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm">
-            <Shield className="w-5 h-5 text-white" />
-            <span className="text-sm text-white/90">Secure & Encrypted</span>
+          <div className="mt-12 flex items-center gap-2 px-6 py-3 rounded-full bg-primary-foreground/10 backdrop-blur-sm animate-fade-up delay-300">
+            <Shield className="w-5 h-5 text-primary-foreground" />
+            <span className="text-sm text-primary-foreground/90 font-medium">256-bit SSL Encrypted</span>
           </div>
         </div>
       </div>
 
       {/* Right side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md animate-fade-up">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10">
+        <div className="w-full max-w-md animate-scale-in">
           {/* Mobile logo */}
-          <Link to="/" className="lg:hidden flex items-center gap-2 text-xl font-bold text-foreground mb-8 justify-center">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary-foreground" />
+          <Link to="/" className="lg:hidden flex items-center gap-3 text-xl font-bold text-foreground mb-8 justify-center animate-fade-up">
+            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shadow-glow">
+              <Users className="w-6 h-6 text-primary-foreground" />
             </div>
             <span>StudyBuddyFinder</span>
           </Link>
 
-          <Card variant="elevated" className="border-0 shadow-medium">
+          <Card variant="elevated" className="border-0 shadow-medium backdrop-blur-sm bg-card/95">
             <CardHeader className="text-center pb-0">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mx-auto mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mx-auto mb-4 animate-fade-up">
                 <Sparkles className="w-4 h-4" />
                 <span>{isSignUp ? 'Create Account' : 'Welcome Back'}</span>
               </div>
-              <CardTitle className="text-2xl">
+              <CardTitle className="text-2xl animate-fade-up delay-100">
                 {isSignUp ? 'Get Started' : 'Sign In'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="animate-fade-up delay-200">
                 {isSignUp 
                   ? 'Create your account to find study buddies'
                   : 'Sign in to continue your learning journey'
@@ -279,7 +324,7 @@ export default function Auth() {
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 {isSignUp && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 animate-fade-up">
                     <Label htmlFor="name">Full Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -300,7 +345,7 @@ export default function Auth() {
                   </div>
                 )}
                 
-                <div className="space-y-2">
+                <div className="space-y-2 animate-fade-up delay-100">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -320,7 +365,7 @@ export default function Auth() {
                   )}
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-2 animate-fade-up delay-200">
                   <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -346,14 +391,13 @@ export default function Auth() {
                     <p className="text-sm text-destructive">{errors.password}</p>
                   )}
                   
-                  {/* Password strength indicator for signup */}
                   {isSignUp && password && (
                     <div className="space-y-1">
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((level) => (
                           <div
                             key={level}
-                            className={`h-1 flex-1 rounded-full transition-colors ${
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
                               level <= passwordStrength.strength 
                                 ? passwordStrength.color 
                                 : 'bg-muted'
@@ -363,16 +407,15 @@ export default function Auth() {
                       </div>
                       {passwordStrength.label && (
                         <p className="text-xs text-muted-foreground">
-                          Password strength: {passwordStrength.label}
+                          Password strength: <span className="font-medium">{passwordStrength.label}</span>
                         </p>
                       )}
                     </div>
                   )}
                 </div>
                 
-                {/* Confirm password for signup */}
                 {isSignUp && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 animate-fade-up delay-300">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -402,7 +445,7 @@ export default function Auth() {
                 
                 <Button 
                   type="submit" 
-                  className="w-full" 
+                  className="w-full animate-fade-up delay-400" 
                   size="lg"
                   disabled={loading || isLockedOut}
                 >
@@ -413,13 +456,13 @@ export default function Auth() {
                   ) : (
                     <>
                       {isSignUp ? 'Create Account' : 'Sign In'}
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-5 h-5 ml-2" />
                     </>
                   )}
                 </Button>
               </form>
               
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center animate-fade-up delay-500">
                 <p className="text-sm text-muted-foreground">
                   {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                   <button
@@ -430,7 +473,7 @@ export default function Auth() {
                       setPassword('');
                       setConfirmPassword('');
                     }}
-                    className="text-primary font-medium hover:underline"
+                    className="text-primary font-medium hover:underline transition-colors"
                   >
                     {isSignUp ? 'Sign In' : 'Sign Up'}
                   </button>
@@ -439,11 +482,15 @@ export default function Auth() {
             </CardContent>
           </Card>
           
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            <Link to="/" className="hover:text-primary transition-colors">
+          {/* Back to home link */}
+          <div className="mt-6 text-center animate-fade-up delay-500">
+            <Link 
+              to="/" 
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               ← Back to Home
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

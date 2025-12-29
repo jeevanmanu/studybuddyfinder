@@ -18,8 +18,7 @@ export function Navbar() {
   ];
 
   const authNavLinks = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/profile', label: 'Profile', icon: User },
+    { href: '/dashboard', label: 'Dashboard', icon: User },
     { href: '/ai-assistant', label: 'AI Assistant', icon: Brain },
     { href: '/find-buddies', label: 'Find Buddies', icon: Search },
     { href: '/messages', label: 'Messages', icon: MessageCircle },

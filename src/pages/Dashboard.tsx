@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  User, BookOpen, Clock, Target, Plus, X, Save, 
-  Sparkles, GraduationCap, Users, Calendar 
+  User, BookOpen, Clock, Target, X, Save, 
+  Sparkles, GraduationCap, Calendar, Mail, Shield,
+  Camera, CheckCircle, LogOut, Users
 } from 'lucide-react';
 
 interface Profile {
@@ -22,6 +24,7 @@ interface Profile {
   subjects: string[];
   study_style: string | null;
   availability: string | null;
+  avatar_url: string | null;
 }
 
 const subjectOptions = [
@@ -48,6 +51,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [friendCount, setFriendCount] = useState(0);
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -66,6 +70,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchFriendCount();
     }
   }, [user]);
 
@@ -98,6 +103,20 @@ export default function Dashboard() {
     }
   };
 
+  const fetchFriendCount = async () => {
+    try {
+      const { count } = await supabase
+        .from('friend_requests')
+        .select('*', { count: 'exact', head: true })
+        .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`)
+        .eq('status', 'accepted');
+      
+      setFriendCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching friend count:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     
@@ -106,11 +125,11 @@ export default function Dashboard() {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name,
-          bio: formData.bio,
+          full_name: formData.full_name.trim(),
+          bio: formData.bio.trim(),
           subjects: formData.subjects,
           study_style: formData.study_style,
-          availability: formData.availability,
+          availability: formData.availability.trim(),
         })
         .eq('user_id', user.id);
 
@@ -143,6 +162,16 @@ export default function Dashboard() {
     }));
   };
 
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   if (authLoading || loading) {
     return (
       <Layout showFooter={false}>
@@ -160,17 +189,34 @@ export default function Dashboard() {
         <div className="gradient-hero border-b border-border">
           <div className="container mx-auto px-4 py-12">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="animate-fade-up">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Welcome back,</p>
-                    <h1 className="text-2xl font-bold text-foreground">
-                      {profile?.full_name || user?.email?.split('@')[0] || 'Student'}
-                    </h1>
-                  </div>
+              <div className="flex items-center gap-4 animate-fade-up">
+                <div className="relative">
+                  <Avatar className="w-20 h-20 border-4 border-background shadow-medium">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="gradient-primary text-primary-foreground text-2xl font-bold">
+                      {getInitials(profile?.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {editMode && (
+                    <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-medium hover:scale-110 transition-transform">
+                      <Camera className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground">
+                    {profile?.full_name || 'Complete Your Profile'}
+                  </h1>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    {user?.email}
+                  </p>
+                  {profile?.full_name && (
+                    <div className="flex items-center gap-1 text-sm text-green-600 mt-1">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Verified Account</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 animate-fade-up delay-100">
@@ -179,15 +225,21 @@ export default function Dashboard() {
                     <Button variant="outline" onClick={() => setEditMode(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={saving}>
+                    <Button onClick={handleSave} disabled={saving} className="gap-2">
                       <Save className="w-4 h-4" />
                       {saving ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </>
                 ) : (
-                  <Button onClick={() => setEditMode(true)}>
-                    Edit Profile
-                  </Button>
+                  <>
+                    <Button onClick={() => setEditMode(true)}>
+                      Edit Profile
+                    </Button>
+                    <Button variant="outline" onClick={handleSignOut} className="gap-2">
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -202,27 +254,24 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-primary" />
-                  Your Profile
+                  About Me
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center pb-4 border-b border-border">
-                  <div className="w-24 h-24 rounded-full gradient-primary mx-auto mb-4 flex items-center justify-center">
-                    <User className="w-12 h-12 text-primary-foreground" />
-                  </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground mb-2 block">Full Name</Label>
                   {editMode ? (
                     <Input
                       value={formData.full_name}
                       onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                      placeholder="Your name"
-                      className="text-center"
+                      placeholder="Your full name"
+                      maxLength={100}
                     />
                   ) : (
-                    <h3 className="text-xl font-bold text-foreground">
-                      {profile?.full_name || 'Add your name'}
-                    </h3>
+                    <p className="text-foreground font-medium">
+                      {profile?.full_name || 'Not set'}
+                    </p>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
                 </div>
 
                 <div>
@@ -232,13 +281,51 @@ export default function Dashboard() {
                       value={formData.bio}
                       onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
                       placeholder="Tell others about yourself..."
-                      className="w-full min-h-[100px] rounded-lg border-2 border-border bg-card px-4 py-2 text-sm resize-none focus:border-primary focus:outline-none"
+                      className="w-full min-h-[120px] rounded-lg border-2 border-input bg-background px-4 py-2 text-sm resize-none focus:border-primary focus:outline-none transition-colors"
+                      maxLength={500}
                     />
                   ) : (
                     <p className="text-sm text-foreground">
                       {profile?.bio || 'No bio added yet'}
                     </p>
                   )}
+                </div>
+
+                {/* Account Security */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <Shield className="w-4 h-4" />
+                    <span className="font-medium">Account Security</span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Email verified</span>
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Password set</span>
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="pt-4 border-t border-border">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="p-3 rounded-lg bg-primary/5">
+                      <div className="text-2xl font-bold text-gradient-primary">
+                        {formData.subjects.length}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Subjects</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-accent/5">
+                      <div className="text-2xl font-bold text-gradient-accent flex items-center justify-center gap-1">
+                        <Users className="w-5 h-5" />
+                        {friendCount}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Connections</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -264,7 +351,7 @@ export default function Dashboard() {
                         <Badge
                           key={subject}
                           variant={isSelected ? 'default' : 'outline'}
-                          className={`cursor-pointer transition-all ${
+                          className={`cursor-pointer transition-all duration-200 ${
                             editMode ? 'hover:scale-105' : ''
                           } ${isSelected ? 'gradient-primary text-primary-foreground' : ''}`}
                           onClick={() => editMode && toggleSubject(subject)}
@@ -293,7 +380,7 @@ export default function Dashboard() {
                         {studyStyles.map((style) => (
                           <label
                             key={style}
-                            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                               formData.study_style === style
                                 ? 'border-primary bg-primary/5'
                                 : 'border-border hover:border-primary/50'
@@ -307,7 +394,7 @@ export default function Dashboard() {
                               onChange={(e) => setFormData(prev => ({ ...prev, study_style: e.target.value }))}
                               className="sr-only"
                             />
-                            <div className={`w-4 h-4 rounded-full border-2 ${
+                            <div className={`w-4 h-4 rounded-full border-2 transition-colors ${
                               formData.study_style === style
                                 ? 'border-primary bg-primary'
                                 : 'border-muted-foreground'
@@ -348,7 +435,8 @@ export default function Dashboard() {
                         value={formData.availability}
                         onChange={(e) => setFormData(prev => ({ ...prev, availability: e.target.value }))}
                         placeholder="e.g., Weekday evenings, Weekend mornings..."
-                        className="w-full min-h-[120px] rounded-lg border-2 border-border bg-card px-4 py-2 text-sm resize-none focus:border-primary focus:outline-none"
+                        className="w-full min-h-[120px] rounded-lg border-2 border-input bg-background px-4 py-2 text-sm resize-none focus:border-primary focus:outline-none transition-colors"
+                        maxLength={200}
                       />
                     ) : (
                       <div className="flex items-center gap-3">
@@ -363,32 +451,6 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Quick Stats */}
-              <Card variant="glass" className="animate-fade-up delay-400">
-                <CardContent className="py-6">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-3xl font-bold text-gradient-primary">
-                        {formData.subjects.length}
-                      </div>
-                      <p className="text-sm text-muted-foreground">Subjects</p>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-gradient-accent">
-                        0
-                      </div>
-                      <p className="text-sm text-muted-foreground">Connections</p>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-foreground">
-                        0
-                      </div>
-                      <p className="text-sm text-muted-foreground">Study Sessions</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
