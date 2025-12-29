@@ -6,21 +6,47 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { Users, Mail, Lock, User, ArrowRight, Sparkles, Eye, EyeOff, Shield } from 'lucide-react';
 import { z } from 'zod';
 
-const emailSchema = z.string().email('Please enter a valid email address');
-const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
-const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
+const emailSchema = z.string()
+  .trim()
+  .min(1, 'Email is required')
+  .email('Please enter a valid email address')
+  .max(255, 'Email must be less than 255 characters');
+
+const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(72, 'Password must be less than 72 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+
+const nameSchema = z.string()
+  .trim()
+  .min(2, 'Name must be at least 2 characters')
+  .max(100, 'Name must be less than 100 characters')
+  .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes');
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<{ 
+    email?: string; 
+    password?: string; 
+    confirmPassword?: string;
+    name?: string 
+  }>({});
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
   
   const { signUp, signIn, user } = useAuth();
   const navigate = useNavigate();
@@ -36,10 +62,19 @@ export default function Auth() {
     setIsSignUp(searchParams.get('mode') === 'signup');
   }, [searchParams]);
 
+  // Check if user is locked out
+  const isLockedOut = lockoutUntil && new Date() < lockoutUntil;
+
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string; name?: string } = {};
+    const newErrors: { 
+      email?: string; 
+      password?: string; 
+      confirmPassword?: string;
+      name?: string 
+    } = {};
     
-    const emailResult = emailSchema.safeParse(email);
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailResult = emailSchema.safeParse(trimmedEmail);
     if (!emailResult.success) {
       newErrors.email = emailResult.error.errors[0].message;
     }
@@ -50,7 +85,12 @@ export default function Auth() {
     }
     
     if (isSignUp) {
-      const nameResult = nameSchema.safeParse(fullName);
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+      
+      const trimmedName = fullName.trim();
+      const nameResult = nameSchema.safeParse(trimmedName);
       if (!nameResult.success) {
         newErrors.name = nameResult.error.errors[0].message;
       }
@@ -63,18 +103,50 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check lockout
+    if (isLockedOut) {
+      const remainingTime = Math.ceil((lockoutUntil!.getTime() - Date.now()) / 1000 / 60);
+      toast({
+        title: 'Too many attempts',
+        description: `Please try again in ${remainingTime} minute(s).`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     if (!validateForm()) return;
     
     setLoading(true);
     
     try {
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedName = fullName.trim();
+      
       if (isSignUp) {
-        const { error } = await signUp(email, password, fullName);
+        const { error } = await signUp(trimmedEmail, password, trimmedName);
         if (error) {
-          if (error.message.includes('already registered')) {
+          // Handle specific error cases
+          const errorMessage = error.message.toLowerCase();
+          
+          if (errorMessage.includes('already registered') || 
+              errorMessage.includes('user already exists') ||
+              errorMessage.includes('email already')) {
             toast({
-              title: 'Account exists',
-              description: 'This email is already registered. Please sign in instead.',
+              title: 'Email already registered',
+              description: 'This email is already in use. Please sign in or use a different email.',
+              variant: 'destructive',
+            });
+          } else if (errorMessage.includes('password')) {
+            toast({
+              title: 'Weak password',
+              description: 'Please choose a stronger password.',
+              variant: 'destructive',
+            });
+          } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
+            setLockoutUntil(new Date(Date.now() + 5 * 60 * 1000)); // 5 minute lockout
+            toast({
+              title: 'Too many attempts',
+              description: 'Please wait 5 minutes before trying again.',
               variant: 'destructive',
             });
           } else {
@@ -92,14 +164,29 @@ export default function Auth() {
           navigate('/dashboard');
         }
       } else {
-        const { error } = await signIn(email, password);
+        const { error } = await signIn(trimmedEmail, password);
         if (error) {
-          toast({
-            title: 'Sign in failed',
-            description: 'Invalid email or password. Please try again.',
-            variant: 'destructive',
-          });
+          // Increment attempt count for failed logins
+          const newAttemptCount = attemptCount + 1;
+          setAttemptCount(newAttemptCount);
+          
+          // Lock out after 5 failed attempts
+          if (newAttemptCount >= 5) {
+            setLockoutUntil(new Date(Date.now() + 15 * 60 * 1000)); // 15 minute lockout
+            toast({
+              title: 'Account temporarily locked',
+              description: 'Too many failed attempts. Please try again in 15 minutes.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Sign in failed',
+              description: `Invalid email or password. ${5 - newAttemptCount} attempts remaining.`,
+              variant: 'destructive',
+            });
+          }
         } else {
+          setAttemptCount(0); // Reset on successful login
           navigate('/dashboard');
         }
       }
@@ -113,6 +200,27 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
+  const getPasswordStrength = () => {
+    if (!password) return { strength: 0, label: '' };
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    
+    const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+    const colors = ['bg-destructive', 'bg-destructive', 'bg-accent', 'bg-primary', 'bg-green-500'];
+    
+    return { 
+      strength, 
+      label: labels[strength - 1] || '', 
+      color: colors[strength - 1] || 'bg-muted'
+    };
+  };
+
+  const passwordStrength = getPasswordStrength();
 
   return (
     <div className="min-h-screen flex">
@@ -132,6 +240,12 @@ export default function Auth() {
           <p className="text-xl text-white/80 max-w-md">
             Join thousands of students finding their perfect study partners and achieving their academic goals together.
           </p>
+          
+          {/* Security badge */}
+          <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm">
+            <Shield className="w-5 h-5 text-white" />
+            <span className="text-sm text-white/90">Secure & Encrypted</span>
+          </div>
         </div>
       </div>
 
@@ -176,6 +290,8 @@ export default function Auth() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="pl-10"
+                        maxLength={100}
+                        autoComplete="name"
                       />
                     </div>
                     {errors.name && (
@@ -195,6 +311,8 @@ export default function Auth() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
+                      maxLength={255}
+                      autoComplete="email"
                     />
                   </div>
                   {errors.email && (
@@ -208,26 +326,90 @@ export default function Auth() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 pr-10"
+                      maxLength={72}
+                      autoComplete={isSignUp ? 'new-password' : 'current-password'}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                   </div>
                   {errors.password && (
                     <p className="text-sm text-destructive">{errors.password}</p>
                   )}
+                  
+                  {/* Password strength indicator for signup */}
+                  {isSignUp && password && (
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <div
+                            key={level}
+                            className={`h-1 flex-1 rounded-full transition-colors ${
+                              level <= passwordStrength.strength 
+                                ? passwordStrength.color 
+                                : 'bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {passwordStrength.label && (
+                        <p className="text-xs text-muted-foreground">
+                          Password strength: {passwordStrength.label}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
+                
+                {/* Confirm password for signup */}
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10 pr-10"
+                        maxLength={72}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                    )}
+                  </div>
+                )}
                 
                 <Button 
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={loading}
+                  disabled={loading || isLockedOut}
                 >
                   {loading ? (
                     <span className="animate-pulse">Please wait...</span>
+                  ) : isLockedOut ? (
+                    <span>Temporarily locked</span>
                   ) : (
                     <>
                       {isSignUp ? 'Create Account' : 'Sign In'}
@@ -242,7 +424,12 @@ export default function Auth() {
                   {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                   <button
                     type="button"
-                    onClick={() => setIsSignUp(!isSignUp)}
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setErrors({});
+                      setPassword('');
+                      setConfirmPassword('');
+                    }}
                     className="text-primary font-medium hover:underline"
                   >
                     {isSignUp ? 'Sign In' : 'Sign Up'}

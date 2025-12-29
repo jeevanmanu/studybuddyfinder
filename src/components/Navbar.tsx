@@ -3,10 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { FriendRequestsDropdown } from '@/components/FriendRequestsDropdown';
-import { Menu, X, Users, Brain, Search, MessageCircle } from 'lucide-react';
+import { StudyNewsPopup } from '@/components/StudyNewsPopup';
+import { Menu, X, Users, Brain, Search, MessageCircle, Newspaper, User } from 'lucide-react';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showNewsPopup, setShowNewsPopup] = useState(false);
   const { user, signOut } = useAuth();
   const location = useLocation();
 
@@ -17,6 +19,7 @@ export function Navbar() {
 
   const authNavLinks = [
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/profile', label: 'Profile', icon: User },
     { href: '/ai-assistant', label: 'AI Assistant', icon: Brain },
     { href: '/find-buddies', label: 'Find Buddies', icon: Search },
     { href: '/messages', label: 'Messages', icon: MessageCircle },
@@ -68,10 +71,20 @@ export function Navbar() {
                     <Link to={link.href}>{link.label}</Link>
                   </Button>
                 ))}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowNewsPopup(true)}
+                  className="gap-1"
+                >
+                  <Newspaper className="w-4 h-4" />
+                  <span className="hidden lg:inline">News</span>
+                </Button>
                 <FriendRequestsDropdown />
                 <Button variant="outline" size="sm" onClick={signOut}>
                   Sign Out
                 </Button>
+                <StudyNewsPopup open={showNewsPopup} onOpenChange={setShowNewsPopup} />
               </>
             ) : (
               <>
