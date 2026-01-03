@@ -261,3 +261,28 @@
 .delay-300 { animation-delay: 300ms; }
 .delay-400 { animation-delay: 400ms; }
 .delay-500 { animation-delay: 500ms; }
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Interactive card hover */
+.card-interactive {
+  transition: all 0.3s ease;
+}
+.card-interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-medium);
+}

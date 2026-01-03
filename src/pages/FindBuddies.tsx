@@ -84,7 +84,7 @@ export default function FindBuddies() {
   }
 
   return (
-    <Layout>
+    <Layout backgroundVariant="hero">
       <div className="min-h-screen pt-24 pb-16">
         <div className="container mx-auto px-4">
           {/* Header */}

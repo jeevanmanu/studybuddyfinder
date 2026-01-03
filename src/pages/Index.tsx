@@ -92,7 +92,7 @@ const howItWorks = [
 
 export default function Index() {
   return (
-    <Layout>
+    <Layout backgroundVariant="hero">
       {/* Hero Section */}
       <section className="relative overflow-hidden gradient-hero">
         {/* Decorative elements */}
@@ -117,12 +117,12 @@ export default function Index() {
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up delay-300">
               <Button size="lg" variant="hero" asChild>
-                <Link to="/auth?mode=signup">
+                <Link to="/find-buddies">
                   Start Finding Buddies
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="outline" className="hover:scale-105 transition-transform" asChild>
                 <Link to="/about">Learn More</Link>
               </Button>
             </div>

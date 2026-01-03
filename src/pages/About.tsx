@@ -103,7 +103,7 @@ const features = [
 
 export default function About() {
   return (
-    <Layout>
+    <Layout backgroundVariant="hero">
       {/* Hero Section */}
       <section className="relative py-24 gradient-hero overflow-hidden">
         <div className="absolute top-20 right-10 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />

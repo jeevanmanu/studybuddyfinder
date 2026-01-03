@@ -8,12 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/components/ThemeProvider';
 import { 
   User, BookOpen, Clock, Target, X, Save, 
   Sparkles, GraduationCap, Calendar, Mail, Shield,
-  Camera, CheckCircle, LogOut, Users
+  Camera, CheckCircle, LogOut, Users, Palette, Layout as LayoutIcon,
+  Bell, Eye, Moon, Sun, Monitor
 } from 'lucide-react';
 
 interface Profile {
@@ -46,12 +50,28 @@ export default function Dashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [friendCount, setFriendCount] = useState(0);
+  const [activeTab, setActiveTab] = useState('profile');
+  
+  // Customization preferences (stored in localStorage)
+  const [preferences, setPreferences] = useState(() => {
+    const saved = localStorage.getItem('studybuddy-preferences');
+    return saved ? JSON.parse(saved) : {
+      compactLayout: false,
+      showAnimations: true,
+      emailNotifications: true,
+      pushNotifications: false,
+      studyReminders: true,
+      showOnlineStatus: true,
+      profileVisibility: 'public',
+    };
+  });
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -172,6 +192,16 @@ export default function Dashboard() {
     navigate('/');
   };
 
+  const updatePreference = (key: string, value: any) => {
+    const newPrefs = { ...preferences, [key]: value };
+    setPreferences(newPrefs);
+    localStorage.setItem('studybuddy-preferences', JSON.stringify(newPrefs));
+    toast({
+      title: 'Preference updated',
+      description: 'Your settings have been saved.',
+    });
+  };
+
   if (authLoading || loading) {
     return (
       <Layout showFooter={false}>
@@ -246,8 +276,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content with Tabs */}
         <div className="container mx-auto px-4 py-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full max-w-md grid-cols-3 mx-auto">
+              <TabsTrigger value="profile" className="gap-2">
+                <User className="w-4 h-4" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="preferences" className="gap-2">
+                <Palette className="w-4 h-4" />
+                Customize
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-2">
+                <Bell className="w-4 h-4" />
+                Notifications
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Profile Card */}
             <Card variant="elevated" className="lg:col-span-1 animate-fade-up">
@@ -453,6 +501,184 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+            </TabsContent>
+
+            {/* Customize Tab */}
+            <TabsContent value="preferences" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Theme Settings */}
+                <Card variant="elevated" className="animate-fade-up">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Palette className="w-5 h-5 text-primary" />
+                      Theme Settings
+                    </CardTitle>
+                    <CardDescription>Customize the look and feel of your experience</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium">Color Theme</Label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <button
+                          onClick={() => setTheme('light')}
+                          className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 hover:scale-105 ${
+                            theme === 'light' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <Sun className="w-6 h-6 text-amber-500" />
+                          <span className="text-sm font-medium">Light</span>
+                        </button>
+                        <button
+                          onClick={() => setTheme('dark')}
+                          className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 hover:scale-105 ${
+                            theme === 'dark' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <Moon className="w-6 h-6 text-indigo-500" />
+                          <span className="text-sm font-medium">Dark</span>
+                        </button>
+                        <button
+                          onClick={() => setTheme('system')}
+                          className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 hover:scale-105 ${
+                            theme === 'system' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <Monitor className="w-6 h-6 text-muted-foreground" />
+                          <span className="text-sm font-medium">System</span>
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Layout Settings */}
+                <Card variant="elevated" className="animate-fade-up delay-100">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <LayoutIcon className="w-5 h-5 text-accent" />
+                      Layout & Display
+                    </CardTitle>
+                    <CardDescription>Adjust how content is displayed</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium">Compact Layout</Label>
+                        <p className="text-xs text-muted-foreground">Show more content in less space</p>
+                      </div>
+                      <Switch
+                        checked={preferences.compactLayout}
+                        onCheckedChange={(checked) => updatePreference('compactLayout', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium">Show Animations</Label>
+                        <p className="text-xs text-muted-foreground">Enable smooth transitions and effects</p>
+                      </div>
+                      <Switch
+                        checked={preferences.showAnimations}
+                        onCheckedChange={(checked) => updatePreference('showAnimations', checked)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Privacy Settings */}
+                <Card variant="elevated" className="animate-fade-up delay-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-primary" />
+                      Privacy Settings
+                    </CardTitle>
+                    <CardDescription>Control your visibility and data</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium">Show Online Status</Label>
+                        <p className="text-xs text-muted-foreground">Let others see when you're online</p>
+                      </div>
+                      <Switch
+                        checked={preferences.showOnlineStatus}
+                        onCheckedChange={(checked) => updatePreference('showOnlineStatus', checked)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Profile Visibility</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => updatePreference('profileVisibility', 'public')}
+                          className={`p-3 rounded-lg text-sm font-medium transition-all ${
+                            preferences.profileVisibility === 'public' 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-muted hover:bg-muted/80'
+                          }`}
+                        >
+                          Public
+                        </button>
+                        <button
+                          onClick={() => updatePreference('profileVisibility', 'friends')}
+                          className={`p-3 rounded-lg text-sm font-medium transition-all ${
+                            preferences.profileVisibility === 'friends' 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-muted hover:bg-muted/80'
+                          }`}
+                        >
+                          Friends Only
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-6">
+              <Card variant="elevated" className="animate-fade-up">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-primary" />
+                    Notification Preferences
+                  </CardTitle>
+                  <CardDescription>Choose how you want to be notified</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">Email Notifications</Label>
+                      <p className="text-xs text-muted-foreground">Receive updates and alerts via email</p>
+                    </div>
+                    <Switch
+                      checked={preferences.emailNotifications}
+                      onCheckedChange={(checked) => updatePreference('emailNotifications', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">Push Notifications</Label>
+                      <p className="text-xs text-muted-foreground">Get instant notifications in your browser</p>
+                    </div>
+                    <Switch
+                      checked={preferences.pushNotifications}
+                      onCheckedChange={(checked) => updatePreference('pushNotifications', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">Study Reminders</Label>
+                      <p className="text-xs text-muted-foreground">Get reminded about scheduled study sessions</p>
+                    </div>
+                    <Switch
+                      checked={preferences.studyReminders}
+                      onCheckedChange={(checked) => updatePreference('studyReminders', checked)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </Layout>

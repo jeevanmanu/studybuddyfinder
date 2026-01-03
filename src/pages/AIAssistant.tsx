@@ -139,10 +139,10 @@ export default function AIAssistant() {
   }
 
   return (
-    <Layout>
+    <Layout backgroundVariant="hero">
       <div className="min-h-screen pt-20 pb-8 animate-fade-up">
         <div className="container mx-auto px-4 h-[calc(100vh-8rem)]">
-          <Card className="h-full flex flex-col overflow-hidden">
+          <Card className="h-full flex flex-col overflow-hidden backdrop-blur-sm bg-card/90 shadow-medium">
             <CardHeader className="border-b border-border">
               <CardTitle className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
