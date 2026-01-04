@@ -139,7 +139,7 @@ export default function AIAssistant() {
   }
 
   return (
-    <Layout backgroundVariant="hero">
+    <Layout backgroundVariant="hero" showFooter={false}>
       <div className="min-h-screen pt-20 pb-8 animate-fade-up">
         <div className="container mx-auto px-4 h-[calc(100vh-8rem)]">
           <Card className="h-full flex flex-col overflow-hidden backdrop-blur-sm bg-card/90 shadow-medium">
