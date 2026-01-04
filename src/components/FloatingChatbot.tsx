@@ -14,7 +14,7 @@ interface Message {
   timestamp: Date;
 }
 
-export function FloatingChatbot() {
+export const FloatingChatbot = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -31,10 +31,8 @@ export function FloatingChatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Hide on AI Assistant page
-  if (location.pathname === '/ai-assistant') {
-    return null;
-  }
+  // Determine if we should hide
+  const shouldHide = location.pathname === '/ai-assistant';
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,50 +72,61 @@ export function FloatingChatbot() {
         throw new Error(response.error.message);
       }
 
-      // Parse the streaming response
-      const reader = response.data?.getReader?.();
-      if (reader) {
-        let assistantContent = '';
-        const decoder = new TextDecoder();
+      // Handle the response - it could be streaming or JSON
+      let assistantContent = '';
+      
+      if (response.data) {
+        // Check if it's a readable stream
+        if (typeof response.data.getReader === 'function') {
+          const reader = response.data.getReader();
+          const decoder = new TextDecoder();
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.choices?.[0]?.delta?.content) {
+                    assistantContent += data.choices[0].delta.content;
+                  }
+                } catch {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        } else if (typeof response.data === 'string') {
+          // Parse SSE string response
+          const lines = response.data.split('\n');
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
               try {
                 const data = JSON.parse(line.slice(6));
                 if (data.choices?.[0]?.delta?.content) {
                   assistantContent += data.choices[0].delta.content;
                 }
-              } catch (e) {
-                // Skip invalid JSON
+              } catch {
+                // If it's not JSON, use the raw content
+                assistantContent = response.data;
               }
             }
           }
         }
-
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: assistantContent || "I'm here to help with your study questions!",
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        // Fallback for non-streaming response
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I'm here to help! Ask me about study tips, exam preparation, or finding study buddies.",
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
       }
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: assistantContent || "I'm here to help with your study questions! Please try asking again.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
@@ -132,11 +141,16 @@ export function FloatingChatbot() {
     }
   };
 
+  // Hide on AI Assistant page - AFTER all hooks
+  if (shouldHide) {
+    return null;
+  }
+
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg gradient-primary hover:opacity-90 transition-all duration-300 animate-bounce-slow"
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-all duration-300 animate-bounce-slow"
         size="icon"
       >
         <MessageCircle className="w-6 h-6 text-primary-foreground" />
@@ -147,7 +161,7 @@ export function FloatingChatbot() {
   if (isMinimized) {
     return (
       <div className="fixed bottom-6 right-6 z-50 bg-card rounded-full shadow-lg border border-border flex items-center gap-2 px-4 py-2 animate-in slide-in-from-bottom-5">
-        <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
           <Bot className="w-4 h-4 text-primary-foreground" />
         </div>
         <span className="text-sm font-medium">StudyBuddy AI</span>
@@ -174,7 +188,7 @@ export function FloatingChatbot() {
   return (
     <div className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-6rem)] bg-card rounded-2xl shadow-xl border border-border flex flex-col animate-in slide-in-from-bottom-5 zoom-in-95">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between gradient-primary rounded-t-2xl">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-primary rounded-t-2xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-primary-foreground" />
@@ -219,7 +233,7 @@ export function FloatingChatbot() {
                 className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
                   message.role === 'user'
-                    ? 'gradient-primary'
+                    ? 'bg-primary'
                     : 'bg-muted'
                 )}
               >
@@ -233,7 +247,7 @@ export function FloatingChatbot() {
                 className={cn(
                   'max-w-[80%] px-3 py-2 rounded-2xl text-sm',
                   message.role === 'user'
-                    ? 'gradient-primary text-primary-foreground'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground'
                 )}
               >
@@ -284,4 +298,4 @@ export function FloatingChatbot() {
       </div>
     </div>
   );
-}
+};
