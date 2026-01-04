@@ -17,7 +17,7 @@ import {
   User, BookOpen, Clock, Target, X, Save, 
   Sparkles, GraduationCap, Calendar, Mail, Shield,
   Camera, CheckCircle, LogOut, Users, Palette, Layout as LayoutIcon,
-  Bell, Eye, Moon, Sun, Monitor, Loader2
+  Bell, Eye, Moon, Sun, Monitor, Loader2, Plus
 } from 'lucide-react';
 
 interface Profile {
@@ -30,6 +30,16 @@ interface Profile {
   availability: string | null;
   avatar_url: string | null;
 }
+
+// Helper to parse study_style which can now be multiple values stored as comma-separated string
+const parseStudyStyles = (style: string | null): string[] => {
+  if (!style) return [];
+  return style.split(',').map(s => s.trim()).filter(Boolean);
+};
+
+const formatStudyStyles = (styles: string[]): string => {
+  return styles.join(', ');
+};
 
 const subjectOptions = [
   'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science',
@@ -75,13 +85,16 @@ export default function Dashboard() {
     };
   });
   
-  const [formData, setFormData] = useState({
+const [formData, setFormData] = useState({
     full_name: '',
     bio: '',
     subjects: [] as string[],
-    study_style: '',
+    study_styles: [] as string[],
     availability: '',
   });
+  
+  const [customSubject, setCustomSubject] = useState('');
+  const [customStyle, setCustomStyle] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -108,13 +121,13 @@ export default function Dashboard() {
         throw error;
       }
 
-      if (data) {
+if (data) {
         setProfile(data);
         setFormData({
           full_name: data.full_name || '',
           bio: data.bio || '',
           subjects: data.subjects || [],
-          study_style: data.study_style || '',
+          study_styles: parseStudyStyles(data.study_style),
           availability: data.availability || '',
         });
       }
@@ -144,13 +157,13 @@ export default function Dashboard() {
     
     setSaving(true);
     try {
-      const { error } = await supabase
+const { error } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name.trim(),
           bio: formData.bio.trim(),
           subjects: formData.subjects,
-          study_style: formData.study_style,
+          study_style: formatStudyStyles(formData.study_styles),
           availability: formData.availability.trim(),
         })
         .eq('user_id', user.id);
@@ -175,13 +188,44 @@ export default function Dashboard() {
     }
   };
 
-  const toggleSubject = (subject: string) => {
+const toggleSubject = (subject: string) => {
     setFormData(prev => ({
       ...prev,
       subjects: prev.subjects.includes(subject)
         ? prev.subjects.filter(s => s !== subject)
         : [...prev.subjects, subject]
     }));
+  };
+
+  const addCustomSubject = () => {
+    const trimmed = customSubject.trim();
+    if (trimmed && !formData.subjects.includes(trimmed)) {
+      setFormData(prev => ({
+        ...prev,
+        subjects: [...prev.subjects, trimmed]
+      }));
+      setCustomSubject('');
+    }
+  };
+
+  const toggleStudyStyle = (style: string) => {
+    setFormData(prev => ({
+      ...prev,
+      study_styles: prev.study_styles.includes(style)
+        ? prev.study_styles.filter(s => s !== style)
+        : [...prev.study_styles, style]
+    }));
+  };
+
+  const addCustomStyle = () => {
+    const trimmed = customStyle.trim();
+    if (trimmed && !formData.study_styles.includes(trimmed)) {
+      setFormData(prev => ({
+        ...prev,
+        study_styles: [...prev.study_styles, trimmed]
+      }));
+      setCustomStyle('');
+    }
   };
 
   const getInitials = (name: string | null) => {
@@ -453,8 +497,9 @@ export default function Dashboard() {
                     Select the subjects you're studying or want to find partners for
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="flex flex-wrap gap-2">
+                    {/* Preset subjects */}
                     {subjectOptions.map((subject) => {
                       const isSelected = formData.subjects.includes(subject);
                       return (
@@ -471,7 +516,50 @@ export default function Dashboard() {
                         </Badge>
                       );
                     })}
+                    {/* Custom subjects (not in preset list) */}
+                    {formData.subjects
+                      .filter(s => !subjectOptions.includes(s))
+                      .map((subject) => (
+                        <Badge
+                          key={subject}
+                          variant="default"
+                          className={`cursor-pointer transition-all duration-200 gradient-primary text-primary-foreground ${
+                            editMode ? 'hover:scale-105' : ''
+                          }`}
+                          onClick={() => editMode && toggleSubject(subject)}
+                        >
+                          {subject}
+                          {editMode && <X className="w-3 h-3 ml-1" />}
+                        </Badge>
+                      ))}
                   </div>
+                  
+                  {/* Add custom subject */}
+                  {editMode && (
+                    <div className="flex gap-2">
+                      <Input
+                        value={customSubject}
+                        onChange={(e) => setCustomSubject(e.target.value)}
+                        placeholder="Add custom subject..."
+                        maxLength={50}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addCustomSubject();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={addCustomSubject}
+                        disabled={!customSubject.trim()}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -483,41 +571,91 @@ export default function Dashboard() {
                       <Target className="w-5 h-5 text-accent" />
                       Learning Style
                     </CardTitle>
+                    <CardDescription>
+                      Select all that apply
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {editMode ? (
-                      <div className="space-y-2">
-                        {studyStyles.map((style) => (
-                          <label
-                            key={style}
-                            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                              formData.study_style === style
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-primary/50'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="study_style"
-                              value={style}
-                              checked={formData.study_style === style}
-                              onChange={(e) => setFormData(prev => ({ ...prev, study_style: e.target.value }))}
-                              className="sr-only"
-                            />
-                            <div className={`w-4 h-4 rounded-full border-2 transition-colors ${
-                              formData.study_style === style
-                                ? 'border-primary bg-primary'
-                                : 'border-muted-foreground'
-                            }`}>
-                              {formData.study_style === style && (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          {studyStyles.map((style) => {
+                            const isSelected = formData.study_styles.includes(style);
+                            return (
+                              <label
+                                key={style}
+                                className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                                  isSelected
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border hover:border-primary/50'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleStudyStyle(style)}
+                                  className="sr-only"
+                                />
+                                <div className={`w-5 h-5 rounded border-2 transition-colors flex items-center justify-center ${
+                                  isSelected
+                                    ? 'border-primary bg-primary'
+                                    : 'border-muted-foreground'
+                                }`}>
+                                  {isSelected && (
+                                    <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            <span className="text-sm font-medium">{style}</span>
-                          </label>
-                        ))}
+                                <span className="text-sm font-medium">{style}</span>
+                              </label>
+                            );
+                          })}
+                          {/* Custom styles */}
+                          {formData.study_styles
+                            .filter(s => !studyStyles.includes(s))
+                            .map((style) => (
+                              <label
+                                key={style}
+                                className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary bg-primary/5 cursor-pointer transition-all duration-200"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={true}
+                                  onChange={() => toggleStudyStyle(style)}
+                                  className="sr-only"
+                                />
+                                <div className="w-5 h-5 rounded border-2 border-primary bg-primary transition-colors flex items-center justify-center">
+                                  <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                </div>
+                                <span className="text-sm font-medium">{style}</span>
+                                <X className="w-4 h-4 ml-auto text-muted-foreground hover:text-destructive" />
+                              </label>
+                            ))}
+                        </div>
+                        
+                        {/* Add custom learning style */}
+                        <div className="flex gap-2">
+                          <Input
+                            value={customStyle}
+                            onChange={(e) => setCustomStyle(e.target.value)}
+                            placeholder="Add custom style..."
+                            maxLength={50}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addCustomStyle();
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={addCustomStyle}
+                            disabled={!customStyle.trim()}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
