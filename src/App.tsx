@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import AIAssistant from "./pages/AIAssistant";
 import FindBuddies from "./pages/FindBuddies";
 import Messages from "./pages/Messages";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/find-buddies" element={<FindBuddies />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/messages/:friendId" element={<Messages />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -136,7 +136,7 @@ export function Navbar() {
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')} className="flex items-center gap-2 cursor-pointer">
+                    <DropdownMenuItem onClick={() => navigate('/settings')} className="flex items-center gap-2 cursor-pointer">
                       <Settings className="w-4 h-4" />
                       Settings
                     </DropdownMenuItem>

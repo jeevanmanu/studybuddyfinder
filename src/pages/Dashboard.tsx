@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Layout } from '@/components/Layout';
@@ -17,7 +17,7 @@ import {
   User, BookOpen, Clock, Target, X, Save, 
   Sparkles, GraduationCap, Calendar, Mail, Shield,
   Camera, CheckCircle, LogOut, Users, Palette, Layout as LayoutIcon,
-  Bell, Eye, Moon, Sun, Monitor
+  Bell, Eye, Moon, Sun, Monitor, Loader2
 } from 'lucide-react';
 
 interface Profile {
@@ -55,9 +55,11 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [friendCount, setFriendCount] = useState(0);
   const [activeTab, setActiveTab] = useState('profile');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Customization preferences (stored in localStorage)
   const [preferences, setPreferences] = useState(() => {
@@ -192,6 +194,51 @@ export default function Dashboard() {
     navigate('/');
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Error', description: 'Please select an image file', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Image must be less than 5MB', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+      toast({ title: 'Success', description: 'Profile picture updated!' });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: 'Error', description: 'Failed to upload image', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const updatePreference = (key: string, value: any) => {
     const newPrefs = { ...preferences, [key]: value };
     setPreferences(newPrefs);
@@ -228,10 +275,25 @@ export default function Dashboard() {
                     </AvatarFallback>
                   </Avatar>
                   {editMode && (
-                    <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-medium hover:scale-110 transition-transform">
-                      <Camera className="w-4 h-4" />
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-medium hover:scale-110 transition-transform disabled:opacity-50"
+                    >
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Camera className="w-4 h-4" />
+                      )}
                     </button>
                   )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">
