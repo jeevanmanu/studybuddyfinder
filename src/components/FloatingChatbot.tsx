@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2, Sparkles } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -13,6 +12,8 @@ interface Message {
   content: string;
   timestamp: Date;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
 export const FloatingChatbot = () => {
   const location = useLocation();
@@ -59,80 +60,121 @@ export const FloatingChatbot = () => {
     setIsLoading(true);
 
     try {
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content,
-          })),
+      const allMessages = [...messages, userMessage].map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
+        body: JSON.stringify({ messages: allMessages }),
       });
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+        if (response.status === 402) {
+          throw new Error('Service unavailable. Please try again later.');
+        }
+        throw new Error('Failed to get response');
       }
 
-      // Handle the response - it could be streaming or JSON
-      let assistantContent = '';
-      
-      if (response.data) {
-        // Check if it's a readable stream
-        if (typeof response.data.getReader === 'function') {
-          const reader = response.data.getReader();
-          const decoder = new TextDecoder();
+      if (!response.body) {
+        throw new Error('No response body');
+      }
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  if (data.choices?.[0]?.delta?.content) {
-                    assistantContent += data.choices[0].delta.content;
-                  }
-                } catch {
-                  // Skip invalid JSON
-                }
-              }
+      // Stream the response token by token
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let assistantContent = '';
+
+      // Create the assistant message placeholder
+      const assistantMessageId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        textBuffer += decoder.decode(value, { stream: true });
+
+        // Process line-by-line
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              // Update the assistant message with new content
+              setMessages(prev => prev.map(m => 
+                m.id === assistantMessageId 
+                  ? { ...m, content: assistantContent }
+                  : m
+              ));
             }
-          }
-        } else if (typeof response.data === 'string') {
-          // Parse SSE string response
-          const lines = response.data.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.choices?.[0]?.delta?.content) {
-                  assistantContent += data.choices[0].delta.content;
-                }
-              } catch {
-                // If it's not JSON, use the raw content
-                assistantContent = response.data;
-              }
-            }
+          } catch {
+            // Incomplete JSON, put it back and wait for more data
+            textBuffer = line + '\n' + textBuffer;
+            break;
           }
         }
       }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: assistantContent || "I'm here to help with your study questions! Please try asking again.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+      // Final flush for any remaining content
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw) continue;
+          if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+          if (raw.startsWith(':') || raw.trim() === '') continue;
+          if (!raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+            }
+          } catch { /* ignore partial leftovers */ }
+        }
+      }
+
+      // Ensure we have content
+      if (!assistantContent) {
+        setMessages(prev => prev.map(m => 
+          m.id === assistantMessageId 
+            ? { ...m, content: "I'm here to help with your study questions! Please try asking again." }
+            : m
+        ));
+      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "Sorry, I'm having trouble connecting. Please try again!",
+        content: error instanceof Error ? error.message : "Sorry, I'm having trouble connecting. Please try again!",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -255,7 +297,7 @@ export const FloatingChatbot = () => {
               </div>
             </div>
           ))}
-          {isLoading && (
+          {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
             <div className="flex gap-2">
               <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                 <Bot className="w-4 h-4 text-muted-foreground" />
