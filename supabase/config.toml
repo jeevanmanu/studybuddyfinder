@@ -2,3 +2,12 @@ project_id = "zsjpifxaycttqydwbfim"
 
 [functions.ai-chat]
 verify_jwt = true
+
+[functions.process-document]
+verify_jwt = false
+
+[functions.analyze-performance]
+verify_jwt = false
+
+[functions.send-login-notification]
+verify_jwt = false
