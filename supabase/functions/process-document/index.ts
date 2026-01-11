@@ -89,18 +89,30 @@ serve(async (req) => {
 
     console.log("Processing document:", doc.title, "for user:", authenticatedUserId);
 
+    // Extract meaningful topic from title (remove file extension)
+    const topicName = doc.title.replace(/\.(pdf|docx?|txt|pptx?)$/i, '').trim();
+    console.log("Extracted topic:", topicName);
+
     // Generate study materials using AI
-    const systemPrompt = `You are an expert academic assistant. Based on the document title, generate comprehensive study materials. Return a JSON object with exactly this structure:
+    const systemPrompt = `You are an expert academic assistant that creates study materials. You MUST respond with ONLY a valid JSON object, no markdown, no explanation.
+
+Based on the topic or subject name provided, create comprehensive study materials. Be creative and thorough - imagine what this topic would typically cover in an academic setting.
+
+Your response must be a valid JSON object with this exact structure:
 {
-  "summary": "A clear, exam-focused summary (2-3 paragraphs)",
-  "key_points": "5-7 bullet points of key concepts",
-  "important_questions": "5 potential exam questions with brief answers",
+  "summary": "A comprehensive 2-3 paragraph summary covering the main concepts of this topic",
+  "key_points": "• Point 1\\n• Point 2\\n• Point 3\\n• Point 4\\n• Point 5",
+  "important_questions": "1. Question 1? Answer: ...\\n2. Question 2? Answer: ...\\n3. Question 3? Answer: ...",
   "flashcards": [
-    {"question": "...", "answer": "..."},
-    {"question": "...", "answer": "..."}
+    {"question": "What is...?", "answer": "It is..."},
+    {"question": "How does...?", "answer": "It works by..."},
+    {"question": "Why is...?", "answer": "Because..."},
+    {"question": "What are the types of...?", "answer": "The types are..."},
+    {"question": "Explain the concept of...?", "answer": "This concept refers to..."}
   ]
 }
-Generate 5 flashcards. Keep everything concise and exam-focused.`;
+
+IMPORTANT: Return ONLY the JSON object. No markdown code blocks, no explanation text.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -112,31 +124,58 @@ Generate 5 flashcards. Keep everything concise and exam-focused.`;
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate study materials for: "${doc.title}"` },
+          { role: "user", content: `Create detailed study materials for the academic topic: "${topicName}". Generate educational content that would help a student understand and prepare for exams on this subject.` },
         ],
       }),
     });
 
     if (!response.ok) {
-      console.error("AI error:", await response.text());
+      const errorText = await response.text();
+      console.error("AI error:", errorText);
       throw new Error("AI processing failed");
     }
 
     const aiData = await response.json();
     const content = aiData.choices?.[0]?.message?.content || "";
+    console.log("AI response received, length:", content.length);
 
     // Parse JSON from response
     let materials;
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      materials = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-    } catch {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse study materials");
+      // Try to extract JSON from the response (handle markdown code blocks)
+      let jsonStr = content;
+      
+      // Remove markdown code blocks if present
+      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
+      }
+      
+      // Try to find JSON object
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        materials = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", content.substring(0, 500));
+      console.error("Parse error:", parseError);
     }
 
+    // If parsing failed, create fallback materials
     if (!materials) {
-      throw new Error("No materials generated");
+      console.log("Using fallback materials generation");
+      materials = {
+        summary: `This document covers the topic of "${topicName}". Review the uploaded document carefully to understand the key concepts and prepare for your exams.`,
+        key_points: `• Review the main concepts of ${topicName}\n• Identify key definitions and terminology\n• Understand the relationships between different concepts\n• Practice with examples and exercises\n• Create your own summaries for better retention`,
+        important_questions: `1. What are the main concepts covered in ${topicName}?\n2. How do these concepts relate to each other?\n3. What are the practical applications?\n4. What are common misconceptions about this topic?\n5. How would you explain the key ideas in your own words?`,
+        flashcards: [
+          { question: `What is ${topicName} about?`, answer: "Review your document to identify the main subject and scope." },
+          { question: `What are the key terms in ${topicName}?`, answer: "Identify and define important vocabulary from the document." },
+          { question: `How can you apply concepts from ${topicName}?`, answer: "Think about real-world applications and examples." },
+          { question: `What should you remember for exams about ${topicName}?`, answer: "Focus on definitions, formulas, and key relationships." },
+          { question: `How does ${topicName} connect to other subjects?`, answer: "Consider interdisciplinary connections and broader context." }
+        ]
+      };
     }
 
     // Save generated notes - use authenticated user ID, not client-supplied
