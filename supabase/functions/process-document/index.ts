@@ -28,18 +28,18 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    // Verify the user using getUser() which validates server-side
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.error("Auth verification failed:", claimsError);
+    if (userError || !user) {
+      console.error("Auth verification failed:", userError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const authenticatedUserId = claimsData.claims.sub;
+    const authenticatedUserId = user.id;
     console.log("Authenticated user:", authenticatedUserId);
 
     const { documentId } = await req.json();
