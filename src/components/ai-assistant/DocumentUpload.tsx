@@ -117,16 +117,16 @@ export function DocumentUpload({ userId, onDocumentProcessed }: DocumentUploadPr
             <input
               type="file"
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt"
+              accept=".pdf"
               onChange={handleFileSelect}
               disabled={isUploading}
             />
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Upload className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-lg font-semibold mb-1">Upload Study Material</h3>
+            <h3 className="text-lg font-semibold mb-1">Upload PDF Document</h3>
             <p className="text-sm text-muted-foreground text-center">
-              Drag & drop or click to upload PDFs, Word docs, or text files
+              Upload a PDF to extract content and generate notes, flashcards & quizzes
             </p>
             <p className="text-xs text-muted-foreground mt-2">Max 10MB</p>
           </label>

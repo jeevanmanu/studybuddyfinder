@@ -275,6 +275,7 @@ export type Database = {
       quizzes: {
         Row: {
           created_at: string
+          document_id: string | null
           id: string
           percentage: number
           quiz_type: string | null
@@ -287,6 +288,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          document_id?: string | null
           id?: string
           percentage: number
           quiz_type?: string | null
@@ -299,6 +301,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          document_id?: string | null
           id?: string
           percentage?: number
           quiz_type?: string | null
@@ -309,11 +312,20 @@ export type Database = {
           total_questions?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "study_documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       study_documents: {
         Row: {
           created_at: string
+          extracted_text: string | null
           file_path: string
           file_size: number
           file_type: string
@@ -325,6 +337,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extracted_text?: string | null
           file_path: string
           file_size: number
           file_type: string
@@ -336,6 +349,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extracted_text?: string | null
           file_path?: string
           file_size?: number
           file_type?: string
@@ -347,9 +361,45 @@ export type Database = {
         }
         Relationships: []
       }
+      study_room_invites: {
+        Row: {
+          created_at: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+          room_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invitee_id: string
+          inviter_id: string
+          room_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+          room_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_room_invites_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "study_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_room_members: {
         Row: {
           id: string
+          invited_by: string | null
           joined_at: string
           role: string | null
           room_id: string
@@ -357,6 +407,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          invited_by?: string | null
           joined_at?: string
           role?: string | null
           room_id: string
@@ -364,6 +415,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          invited_by?: string | null
           joined_at?: string
           role?: string | null
           room_id?: string

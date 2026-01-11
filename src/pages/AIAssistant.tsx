@@ -4,7 +4,7 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Sparkles, FileText, Users, BarChart3, BookOpen } from 'lucide-react';
+import { Loader2, Sparkles, FileText, Users, BarChart3, BookOpen, GraduationCap } from 'lucide-react';
 import { AIChatAssistant } from '@/components/ai-assistant/AIChatAssistant';
 import { DocumentUpload } from '@/components/ai-assistant/DocumentUpload';
 import { DocumentList } from '@/components/ai-assistant/DocumentList';
@@ -12,6 +12,7 @@ import { FlashcardViewer } from '@/components/ai-assistant/FlashcardViewer';
 import { GeneratedNotes } from '@/components/ai-assistant/GeneratedNotes';
 import { StudyRooms } from '@/components/ai-assistant/StudyRooms';
 import { PerformanceAnalytics } from '@/components/ai-assistant/PerformanceAnalytics';
+import { QuizViewer } from '@/components/ai-assistant/QuizViewer';
 
 export default function AIAssistant() {
   const { user, loading: authLoading } = useAuth();
@@ -46,7 +47,7 @@ export default function AIAssistant() {
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-primary-foreground" />
+                <GraduationCap className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold">AI Study Hub</h1>
@@ -57,7 +58,7 @@ export default function AIAssistant() {
 
           {/* Main Content with Tabs */}
           <Tabs defaultValue="assistant" className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6 w-full max-w-2xl">
+            <TabsList className="grid grid-cols-5 mb-6 w-full max-w-3xl">
               <TabsTrigger value="assistant" className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">AI Chat</span>
@@ -65,6 +66,10 @@ export default function AIAssistant() {
               <TabsTrigger value="documents" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Documents</span>
+              </TabsTrigger>
+              <TabsTrigger value="quizzes" className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Quizzes</span>
               </TabsTrigger>
               <TabsTrigger value="study-rooms" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -115,6 +120,14 @@ export default function AIAssistant() {
                   </Card>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="quizzes">
+              <Card className="backdrop-blur-sm bg-card/90 shadow-medium min-h-[500px]">
+                <CardContent className="p-6">
+                  <QuizViewer userId={user.id} refreshTrigger={refreshTrigger} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="study-rooms">
