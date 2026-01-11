@@ -29,17 +29,20 @@ export function AIChatAssistant() {
 
   const streamChat = async (userMessages: Message[]) => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
-    
+
     // Get the current session token for authentication
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
       throw new Error("Please log in to use the AI assistant");
     }
-    
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // Required by the functions gateway
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        // User JWT
         Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ messages: userMessages }),
