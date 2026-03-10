@@ -44,11 +44,28 @@ serve(async (req) => {
     const { messages } = await req.json();
     
     // Validate messages input
-    if (!messages || !Array.isArray(messages)) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
       return new Response(JSON.stringify({ error: "Invalid messages format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Validate individual message structure to prevent prompt injection
+    const ALLOWED_ROLES = new Set(["user", "assistant"]);
+    for (const msg of messages) {
+      if (
+        !msg ||
+        typeof msg !== "object" ||
+        !ALLOWED_ROLES.has(msg.role) ||
+        typeof msg.content !== "string" ||
+        msg.content.length > 10000
+      ) {
+        return new Response(JSON.stringify({ error: "Invalid message format" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

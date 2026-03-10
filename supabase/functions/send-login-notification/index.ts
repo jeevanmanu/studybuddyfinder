@@ -8,46 +8,55 @@ const corsHeaders = {
 };
 
 interface LoginNotificationRequest {
-  email: string;
   loginTime: string;
   deviceInfo?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email, loginTime, deviceInfo }: LoginNotificationRequest = await req.json();
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
-    // Create Supabase client for logging
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Log the login notification (in production, integrate with email service)
+    // Verify user from JWT
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Derive email from verified JWT, not from request body
+    const email = user.email;
+    const { loginTime, deviceInfo }: LoginNotificationRequest = await req.json();
+
+    // Validate input
+    if (!loginTime || typeof loginTime !== "string" || loginTime.length > 100) {
+      return new Response(JSON.stringify({ error: "Invalid input" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     console.log(`Login notification for ${email} at ${loginTime}`);
     console.log(`Device info: ${deviceInfo || "Unknown"}`);
-
-    // For now, we'll just log the notification
-    // To send actual emails, you would integrate with Resend:
-    // 
-    // const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-    // await resend.emails.send({
-    //   from: "StudyBuddyFinder <notifications@yourdomain.com>",
-    //   to: [email],
-    //   subject: "New Login to Your StudyBuddyFinder Account",
-    //   html: `
-    //     <h1>New Login Detected</h1>
-    //     <p>Hello,</p>
-    //     <p>We noticed a new login to your StudyBuddyFinder account.</p>
-    //     <p><strong>Time:</strong> ${loginTime}</p>
-    //     <p><strong>Device:</strong> ${deviceInfo || "Unknown"}</p>
-    //     <p>If this wasn't you, please secure your account immediately.</p>
-    //   `,
-    // });
 
     return new Response(
       JSON.stringify({ 
@@ -62,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-login-notification:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Internal server error" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
