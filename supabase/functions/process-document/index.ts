@@ -328,6 +328,7 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
           user_id: authenticatedUserId,
           question_text: q.question,
           correct_answer: q.correct_answer,
+          options: q.options || [],
           topic: q.topic || topicName,
           is_correct: false,
           user_answer: null

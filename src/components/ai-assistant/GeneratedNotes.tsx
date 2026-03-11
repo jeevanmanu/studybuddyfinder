@@ -71,7 +71,7 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
       {/* Notes List */}
       <div className="md:col-span-1">
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[600px]">
           <div className="space-y-2 pr-4">
             {notes.map((note) => (
               <Card
@@ -108,9 +108,9 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
       {/* Note Content */}
       <div className="md:col-span-2">
         {selectedNote ? (
-          <Card className="h-[400px]">
+          <Card className="h-[600px]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">{selectedNote.title}</CardTitle>
+              <CardTitle className="text-xl">{selectedNote.title}</CardTitle>
               <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${
                 selectedNote.note_type === 'summary' 
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
@@ -122,15 +122,15 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
               </span>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[280px]">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap text-sm">{selectedNote.content}</p>
+              <ScrollArea className="h-[470px]">
+                <div className="prose dark:prose-invert max-w-none">
+                  <p className="whitespace-pre-wrap text-base leading-relaxed">{selectedNote.content}</p>
                 </div>
               </ScrollArea>
             </CardContent>
           </Card>
         ) : (
-          <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+          <div className="h-[600px] flex items-center justify-center text-muted-foreground">
             Select a note to view
           </div>
         )}

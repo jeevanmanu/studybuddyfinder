@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Loader2, FileText, Play, Trophy, RotateCcw } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -24,6 +24,7 @@ interface QuizQuestion {
   id: string;
   question_text: string;
   correct_answer: string;
+  options: string[] | null;
   user_answer: string | null;
   is_correct: boolean;
   topic: string;
@@ -83,37 +84,69 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setQuestions(data || []);
+
+      // Parse options from jsonb and generate fallbacks if missing
+      const parsed = (data || []).map((q: any) => {
+        let options: string[] = [];
+        if (Array.isArray(q.options) && q.options.length >= 2) {
+          options = q.options;
+        } else {
+          // Generate shuffled fallback options including the correct answer
+          options = generateFallbackOptions(q.correct_answer);
+        }
+        return { ...q, options };
+      });
+
+      setQuestions(parsed);
     } catch (error) {
       console.error('Error fetching questions:', error);
       toast({ title: "Failed to load quiz", variant: "destructive" });
     }
   };
 
+  const generateFallbackOptions = (correctAnswer: string): string[] => {
+    const fillers = [
+      "None of the above",
+      "All of the above",
+      "Cannot be determined",
+    ];
+    const options = [correctAnswer, ...fillers];
+    // Shuffle
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    return options;
+  };
+
+  const shuffleOptions = (options: string[]): string[] => {
+    const shuffled = [...options];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const handleAnswer = async (answer: string) => {
     if (showResult) return;
-    
+
     setSelectedAnswer(answer);
     setShowResult(true);
 
     const currentQuestion = questions[currentIndex];
     const isCorrect = answer === currentQuestion.correct_answer;
-    
+
     if (isCorrect) {
       setScore(prev => prev + 1);
     }
 
-    // Update the question result in database
     try {
       await supabase
         .from('quiz_question_results')
-        .update({
-          user_answer: answer,
-          is_correct: isCorrect
-        })
+        .update({ user_answer: answer, is_correct: isCorrect })
         .eq('id', currentQuestion.id);
 
-      // Update performance analytics
       await updatePerformanceAnalytics(currentQuestion.topic, isCorrect);
     } catch (error) {
       console.error('Error updating answer:', error);
@@ -122,7 +155,6 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
 
   const updatePerformanceAnalytics = async (topic: string, isCorrect: boolean) => {
     try {
-      // Check if analytics record exists
       const { data: existing } = await supabase
         .from('performance_analytics')
         .select('*')
@@ -151,7 +183,7 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
           .from('performance_analytics')
           .insert({
             user_id: userId,
-            topic: topic,
+            topic,
             subject: selectedQuiz?.subject || topic,
             total_attempts: 1,
             correct_attempts: isCorrect ? 1 : 0,
@@ -170,18 +202,13 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
       setSelectedAnswer(null);
       setShowResult(false);
     } else {
-      // Quiz completed
       setQuizCompleted(true);
       const finalPercentage = Math.round((score / questions.length) * 100);
-      
-      // Update quiz score
+
       if (selectedQuiz) {
         await supabase
           .from('quizzes')
-          .update({ 
-            score: score, 
-            percentage: finalPercentage 
-          })
+          .update({ score, percentage: finalPercentage })
           .eq('id', selectedQuiz.id);
       }
 
@@ -213,11 +240,7 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
   if (selectedQuiz && questions.length > 0 && !quizCompleted) {
     const currentQuestion = questions[currentIndex];
     const progress = ((currentIndex + 1) / questions.length) * 100;
-
-    // Generate options from correct answer (simplified approach)
-    const options = [currentQuestion.correct_answer, "Option A", "Option B", "Option C"]
-      .filter((v, i, a) => a.indexOf(v) === i)
-      .slice(0, 4);
+    const options = currentQuestion.options || [currentQuestion.correct_answer];
 
     return (
       <div className="space-y-6">
@@ -235,9 +258,9 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
 
         <Card className="p-6">
           <h4 className="text-lg font-medium mb-6">{currentQuestion.question_text}</h4>
-          
+
           <div className="space-y-3">
-            {[currentQuestion.correct_answer].map((option, idx) => (
+            {options.map((option, idx) => (
               <button
                 key={idx}
                 onClick={() => handleAnswer(option)}
@@ -245,20 +268,22 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
                 className={`w-full p-4 rounded-lg text-left transition-all border ${
                   showResult
                     ? option === currentQuestion.correct_answer
-                      ? 'bg-green-100 border-green-500 dark:bg-green-900/30'
+                      ? 'bg-green-100 border-green-500 dark:bg-green-900/30 dark:border-green-500'
                       : selectedAnswer === option
-                      ? 'bg-red-100 border-red-500 dark:bg-red-900/30'
-                      : 'bg-muted'
+                      ? 'bg-red-100 border-red-500 dark:bg-red-900/30 dark:border-red-500'
+                      : 'bg-muted border-border'
+                    : selectedAnswer === option
+                    ? 'bg-accent border-primary'
                     : 'hover:bg-muted border-border'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span>{option}</span>
+                  <span className="text-sm font-medium">{option}</span>
                   {showResult && option === currentQuestion.correct_answer && (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
                   )}
                   {showResult && selectedAnswer === option && option !== currentQuestion.correct_answer && (
-                    <XCircle className="w-5 h-5 text-red-600" />
+                    <XCircle className="w-5 h-5 text-red-600 shrink-0" />
                   )}
                 </div>
               </button>
@@ -278,7 +303,7 @@ export function QuizViewer({ userId, refreshTrigger }: QuizViewerProps) {
   // Quiz completed
   if (quizCompleted && selectedQuiz) {
     const percentage = Math.round((score / questions.length) * 100);
-    
+
     return (
       <div className="text-center space-y-6">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
