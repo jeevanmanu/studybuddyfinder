@@ -122,9 +122,9 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
               </span>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[280px]">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap text-sm">{selectedNote.content}</p>
+              <ScrollArea className="h-[470px]">
+                <div className="prose dark:prose-invert max-w-none">
+                  <p className="whitespace-pre-wrap text-base leading-relaxed">{selectedNote.content}</p>
                 </div>
               </ScrollArea>
             </CardContent>
