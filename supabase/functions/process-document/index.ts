@@ -277,9 +277,34 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
           { question: `Important facts about ${topicName}?`, answer: "Focus on exam-relevant information." },
           { question: `How to study ${topicName}?`, answer: "Use flashcards and practice quizzes." }
         ],
-        quiz_questions: [
-          { question: `What is the main focus of ${topicName}?`, options: ["A) Core concepts", "B) History", "C) Applications", "D) Theory"], correct_answer: "A) Core concepts", topic: topicName },
-          { question: `Which method helps study ${topicName}?`, options: ["A) Memorization only", "B) Active recall", "C) Passive reading", "D) Ignoring details"], correct_answer: "B) Active recall", topic: topicName }
+        quizzes: [
+          {
+            title: `Quiz 1: ${topicName} Fundamentals`,
+            questions: Array.from({ length: 10 }, (_, i) => ({
+              question: `Fundamental question ${i + 1} about ${topicName}?`,
+              options: ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+              correct_answer: "A) Option 1",
+              topic: topicName
+            }))
+          },
+          {
+            title: `Quiz 2: ${topicName} Intermediate`,
+            questions: Array.from({ length: 10 }, (_, i) => ({
+              question: `Intermediate question ${i + 1} about ${topicName}?`,
+              options: ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+              correct_answer: "B) Option 2",
+              topic: topicName
+            }))
+          },
+          {
+            title: `Quiz 3: ${topicName} Advanced`,
+            questions: Array.from({ length: 10 }, (_, i) => ({
+              question: `Advanced question ${i + 1} about ${topicName}?`,
+              options: ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+              correct_answer: "C) Option 3",
+              topic: topicName
+            }))
+          }
         ]
       };
     }
