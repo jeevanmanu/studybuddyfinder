@@ -71,7 +71,7 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
       {/* Notes List */}
       <div className="md:col-span-1">
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[600px]">
           <div className="space-y-2 pr-4">
             {notes.map((note) => (
               <Card
