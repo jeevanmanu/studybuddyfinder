@@ -346,17 +346,20 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
       await supabase.from("flashcards").insert(flashcardsToInsert);
     }
 
-    // Auto-generate quiz from document
-    if (materials.quiz_questions && Array.isArray(materials.quiz_questions) && materials.quiz_questions.length > 0) {
-      // Create the quiz record
+    // Auto-generate quizzes from document (3 quizzes, 10 questions each)
+    const quizzesData = materials.quizzes || (materials.quiz_questions ? [{ title: `Quiz: ${topicName}`, questions: materials.quiz_questions }] : []);
+    
+    for (const quizData of quizzesData) {
+      if (!quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) continue;
+
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .insert({
           user_id: authenticatedUserId,
           document_id: documentId,
-          title: `Quiz: ${topicName}`,
+          title: quizData.title || `Quiz: ${topicName}`,
           subject: topicName,
-          total_questions: materials.quiz_questions.length,
+          total_questions: quizData.questions.length,
           score: 0,
           percentage: 0,
           quiz_type: "document"
@@ -365,8 +368,7 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
         .single();
 
       if (!quizError && quiz) {
-        // Insert quiz questions as results (unanswered)
-        const questionsToInsert = materials.quiz_questions.map((q: any) => ({
+        const questionsToInsert = quizData.questions.map((q: any) => ({
           quiz_id: quiz.id,
           user_id: authenticatedUserId,
           question_text: q.question,
@@ -377,7 +379,7 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
           user_answer: null
         }));
         await supabase.from("quiz_question_results").insert(questionsToInsert);
-        console.log("Created quiz with", materials.quiz_questions.length, "questions");
+        console.log("Created quiz:", quizData.title, "with", quizData.questions.length, "questions");
       }
     }
 
