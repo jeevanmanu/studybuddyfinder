@@ -1,0 +1,1 @@
+ALTER TABLE public.quiz_question_results ADD COLUMN options jsonb DEFAULT '[]'::jsonb;

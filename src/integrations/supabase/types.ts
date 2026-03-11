@@ -234,6 +234,7 @@ export type Database = {
           created_at: string
           id: string
           is_correct: boolean
+          options: Json | null
           question_text: string
           quiz_id: string
           topic: string
@@ -245,6 +246,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct: boolean
+          options?: Json | null
           question_text: string
           quiz_id: string
           topic: string
@@ -256,6 +258,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          options?: Json | null
           question_text?: string
           quiz_id?: string
           topic?: string
