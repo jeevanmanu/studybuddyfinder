@@ -110,7 +110,7 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
         {selectedNote ? (
           <Card className="h-[600px]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">{selectedNote.title}</CardTitle>
+              <CardTitle className="text-xl">{selectedNote.title}</CardTitle>
               <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${
                 selectedNote.note_type === 'summary' 
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
