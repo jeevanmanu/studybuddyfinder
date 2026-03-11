@@ -192,13 +192,31 @@ Your response must be a valid JSON object with this exact structure:
     {"question": "What are the types of...?", "answer": "The types are..."},
     {"question": "Explain the concept of...?", "answer": "This concept refers to..."}
   ],
-  "quiz_questions": [
-    {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "A) option", "topic": "topic name"},
-    {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "B) option", "topic": "topic name"}
+  "quizzes": [
+    {
+      "title": "Quiz 1: Fundamentals",
+      "questions": [
+        {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "A) option", "topic": "topic name"},
+        {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "B) option", "topic": "topic name"}
+      ]
+    },
+    {
+      "title": "Quiz 2: Intermediate",
+      "questions": [...]
+    },
+    {
+      "title": "Quiz 3: Advanced",
+      "questions": [...]
+    }
   ]
 }
 
-Generate at least 5 flashcards and 5 quiz questions with 4 multiple choice options each.
+CRITICAL REQUIREMENTS:
+- Generate exactly 5 flashcards.
+- Generate exactly 3 quizzes. Each quiz MUST have exactly 10 MCQ questions.
+- Each MCQ question MUST have exactly 4 options (A, B, C, D).
+- Options should be plausible and well-crafted. Only one option should be correct.
+- The 3 quizzes should cover different difficulty levels: Fundamentals, Intermediate, and Advanced.
 IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
 
     const userPrompt = hasContent 
@@ -259,9 +277,34 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
           { question: `Important facts about ${topicName}?`, answer: "Focus on exam-relevant information." },
           { question: `How to study ${topicName}?`, answer: "Use flashcards and practice quizzes." }
         ],
-        quiz_questions: [
-          { question: `What is the main focus of ${topicName}?`, options: ["A) Core concepts", "B) History", "C) Applications", "D) Theory"], correct_answer: "A) Core concepts", topic: topicName },
-          { question: `Which method helps study ${topicName}?`, options: ["A) Memorization only", "B) Active recall", "C) Passive reading", "D) Ignoring details"], correct_answer: "B) Active recall", topic: topicName }
+        quizzes: [
+          {
+            title: `Quiz 1: ${topicName} Fundamentals`,
+            questions: Array.from({ length: 10 }, (_, i) => ({
+              question: `Fundamental question ${i + 1} about ${topicName}?`,
+              options: ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+              correct_answer: "A) Option 1",
+              topic: topicName
+            }))
+          },
+          {
+            title: `Quiz 2: ${topicName} Intermediate`,
+            questions: Array.from({ length: 10 }, (_, i) => ({
+              question: `Intermediate question ${i + 1} about ${topicName}?`,
+              options: ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+              correct_answer: "B) Option 2",
+              topic: topicName
+            }))
+          },
+          {
+            title: `Quiz 3: ${topicName} Advanced`,
+            questions: Array.from({ length: 10 }, (_, i) => ({
+              question: `Advanced question ${i + 1} about ${topicName}?`,
+              options: ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+              correct_answer: "C) Option 3",
+              topic: topicName
+            }))
+          }
         ]
       };
     }
@@ -303,17 +346,20 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
       await supabase.from("flashcards").insert(flashcardsToInsert);
     }
 
-    // Auto-generate quiz from document
-    if (materials.quiz_questions && Array.isArray(materials.quiz_questions) && materials.quiz_questions.length > 0) {
-      // Create the quiz record
+    // Auto-generate quizzes from document (3 quizzes, 10 questions each)
+    const quizzesData = materials.quizzes || (materials.quiz_questions ? [{ title: `Quiz: ${topicName}`, questions: materials.quiz_questions }] : []);
+    
+    for (const quizData of quizzesData) {
+      if (!quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) continue;
+
       const { data: quiz, error: quizError } = await supabase
         .from("quizzes")
         .insert({
           user_id: authenticatedUserId,
           document_id: documentId,
-          title: `Quiz: ${topicName}`,
+          title: quizData.title || `Quiz: ${topicName}`,
           subject: topicName,
-          total_questions: materials.quiz_questions.length,
+          total_questions: quizData.questions.length,
           score: 0,
           percentage: 0,
           quiz_type: "document"
@@ -322,8 +368,7 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
         .single();
 
       if (!quizError && quiz) {
-        // Insert quiz questions as results (unanswered)
-        const questionsToInsert = materials.quiz_questions.map((q: any) => ({
+        const questionsToInsert = quizData.questions.map((q: any) => ({
           quiz_id: quiz.id,
           user_id: authenticatedUserId,
           question_text: q.question,
@@ -334,7 +379,7 @@ IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
           user_answer: null
         }));
         await supabase.from("quiz_question_results").insert(questionsToInsert);
-        console.log("Created quiz with", materials.quiz_questions.length, "questions");
+        console.log("Created quiz:", quizData.title, "with", quizData.questions.length, "questions");
       }
     }
 

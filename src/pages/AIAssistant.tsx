@@ -91,24 +91,7 @@ export default function AIAssistant() {
 
             <TabsContent value="documents">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="backdrop-blur-sm bg-card/90 shadow-medium">
-                  <CardContent className="p-6 space-y-6">
-                    <DocumentUpload userId={user.id} onDocumentProcessed={handleRefresh} />
-                    <DocumentList userId={user.id} refreshTrigger={refreshTrigger} onProcessDocument={handleRefresh} />
-                  </CardContent>
-                </Card>
-
                 <div className="space-y-6">
-                  <Card className="backdrop-blur-sm bg-card/90 shadow-medium">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                        <h3 className="font-semibold">Flashcards</h3>
-                      </div>
-                      <FlashcardViewer userId={user.id} refreshTrigger={refreshTrigger} />
-                    </CardContent>
-                  </Card>
-
                   <Card className="backdrop-blur-sm bg-card/90 shadow-medium">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-4">
@@ -118,7 +101,24 @@ export default function AIAssistant() {
                       <GeneratedNotes userId={user.id} refreshTrigger={refreshTrigger} />
                     </CardContent>
                   </Card>
+
+                  <Card className="backdrop-blur-sm bg-card/90 shadow-medium">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <BookOpen className="w-5 h-5 text-primary" />
+                        <h3 className="font-semibold">Flashcards</h3>
+                      </div>
+                      <FlashcardViewer userId={user.id} refreshTrigger={refreshTrigger} />
+                    </CardContent>
+                  </Card>
                 </div>
+
+                <Card className="backdrop-blur-sm bg-card/90 shadow-medium">
+                  <CardContent className="p-6 space-y-6">
+                    <DocumentUpload userId={user.id} onDocumentProcessed={handleRefresh} />
+                    <DocumentList userId={user.id} refreshTrigger={refreshTrigger} onProcessDocument={handleRefresh} />
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
