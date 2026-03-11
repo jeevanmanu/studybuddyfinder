@@ -108,7 +108,7 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
       {/* Note Content */}
       <div className="md:col-span-2">
         {selectedNote ? (
-          <Card className="h-[400px]">
+          <Card className="h-[600px]">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">{selectedNote.title}</CardTitle>
               <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${
