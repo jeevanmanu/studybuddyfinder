@@ -130,7 +130,7 @@ export function GeneratedNotes({ userId, refreshTrigger }: GeneratedNotesProps) 
             </CardContent>
           </Card>
         ) : (
-          <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+          <div className="h-[600px] flex items-center justify-center text-muted-foreground">
             Select a note to view
           </div>
         )}
