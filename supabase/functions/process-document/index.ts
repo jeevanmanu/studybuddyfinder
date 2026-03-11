@@ -192,13 +192,31 @@ Your response must be a valid JSON object with this exact structure:
     {"question": "What are the types of...?", "answer": "The types are..."},
     {"question": "Explain the concept of...?", "answer": "This concept refers to..."}
   ],
-  "quiz_questions": [
-    {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "A) option", "topic": "topic name"},
-    {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "B) option", "topic": "topic name"}
+  "quizzes": [
+    {
+      "title": "Quiz 1: Fundamentals",
+      "questions": [
+        {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "A) option", "topic": "topic name"},
+        {"question": "Question text?", "options": ["A) option", "B) option", "C) option", "D) option"], "correct_answer": "B) option", "topic": "topic name"}
+      ]
+    },
+    {
+      "title": "Quiz 2: Intermediate",
+      "questions": [...]
+    },
+    {
+      "title": "Quiz 3: Advanced",
+      "questions": [...]
+    }
   ]
 }
 
-Generate at least 5 flashcards and 5 quiz questions with 4 multiple choice options each.
+CRITICAL REQUIREMENTS:
+- Generate exactly 5 flashcards.
+- Generate exactly 3 quizzes. Each quiz MUST have exactly 10 MCQ questions.
+- Each MCQ question MUST have exactly 4 options (A, B, C, D).
+- Options should be plausible and well-crafted. Only one option should be correct.
+- The 3 quizzes should cover different difficulty levels: Fundamentals, Intermediate, and Advanced.
 IMPORTANT: Return ONLY the JSON object. No markdown code blocks.`;
 
     const userPrompt = hasContent 
