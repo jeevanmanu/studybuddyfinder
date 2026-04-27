@@ -150,7 +150,16 @@ export function Navbar() {
                 
                 <StudyNewsPopup open={showNewsPopup} onOpenChange={setShowNewsPopup} />
               </>
-            ) : null}
+            ) : (
+              <>
+                <Button variant="ghost" asChild className="hover:scale-105 transition-transform">
+                  <Link to="/auth">Sign In</Link>
+                </Button>
+                <Button asChild className="hover:scale-105 transition-transform shadow-glow">
+                  <Link to="/auth?mode=signup">Get Started</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -242,6 +251,20 @@ export function Navbar() {
               </>
             )}
             
+            {!user && (
+              <div className="border-t border-border pt-4 mt-2 space-y-2">
+                <Button variant="ghost" className="w-full justify-start" asChild>
+                  <Link to="/auth" onClick={() => setIsOpen(false)}>
+                    Sign In
+                  </Link>
+                </Button>
+                <Button className="w-full" asChild>
+                  <Link to="/auth?mode=signup" onClick={() => setIsOpen(false)}>
+                    Get Started
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

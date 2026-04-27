@@ -346,8 +346,8 @@ export default function Index() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="lg" variant="glass" asChild>
-              <Link to="/find-buddies">
-                Start Finding Buddies
+              <Link to="/auth?mode=signup">
+                Get Started Free
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
